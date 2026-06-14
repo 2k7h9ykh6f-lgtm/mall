@@ -126,39 +126,56 @@ public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
             Date endTime = couponHistoryDetail.getCoupon().getEndTime();
             if(useType.equals(0)){
                 //0->全场通用
-                //判断是否满足优惠起点
-                //计算购物车商品的总价
                 BigDecimal totalAmount = calcTotalAmount(cartItemList);
-                if(now.before(endTime)&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
+                couponHistoryDetail.setMatchedAmount(totalAmount);
+                if(now.after(endTime)){
+                    couponHistoryDetail.setUnavailableReason("优惠券已过期");
                     disableList.add(couponHistoryDetail);
+                }else if(totalAmount.subtract(minPoint).intValue()<0){
+                    couponHistoryDetail.setUnavailableReason("订单金额未达到使用门槛（满¥"+minPoint+"）");
+                    disableList.add(couponHistoryDetail);
+                }else{
+                    enableList.add(couponHistoryDetail);
                 }
             }else if(useType.equals(1)){
                 //1->指定分类
-                //计算指定分类商品的总价
                 List<Long> productCategoryIds = new ArrayList<>();
                 for (SmsCouponProductCategoryRelation categoryRelation : couponHistoryDetail.getCategoryRelationList()) {
                     productCategoryIds.add(categoryRelation.getProductCategoryId());
                 }
                 BigDecimal totalAmount = calcTotalAmountByproductCategoryId(cartItemList,productCategoryIds);
-                if(now.before(endTime)&&totalAmount.intValue()>0&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
+                couponHistoryDetail.setMatchedAmount(totalAmount);
+                if(now.after(endTime)){
+                    couponHistoryDetail.setUnavailableReason("优惠券已过期");
                     disableList.add(couponHistoryDetail);
+                }else if(totalAmount.intValue()<=0){
+                    couponHistoryDetail.setUnavailableReason("购物车中没有指定分类的商品");
+                    disableList.add(couponHistoryDetail);
+                }else if(totalAmount.subtract(minPoint).intValue()<0){
+                    couponHistoryDetail.setUnavailableReason("指定分类商品金额未达到使用门槛（满¥"+minPoint+"）");
+                    disableList.add(couponHistoryDetail);
+                }else{
+                    enableList.add(couponHistoryDetail);
                 }
             }else if(useType.equals(2)){
                 //2->指定商品
-                //计算指定商品的总价
                 List<Long> productIds = new ArrayList<>();
                 for (SmsCouponProductRelation productRelation : couponHistoryDetail.getProductRelationList()) {
                     productIds.add(productRelation.getProductId());
                 }
                 BigDecimal totalAmount = calcTotalAmountByProductId(cartItemList,productIds);
-                if(now.before(endTime)&&totalAmount.intValue()>0&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
+                couponHistoryDetail.setMatchedAmount(totalAmount);
+                if(now.after(endTime)){
+                    couponHistoryDetail.setUnavailableReason("优惠券已过期");
                     disableList.add(couponHistoryDetail);
+                }else if(totalAmount.intValue()<=0){
+                    couponHistoryDetail.setUnavailableReason("购物车中没有指定商品");
+                    disableList.add(couponHistoryDetail);
+                }else if(totalAmount.subtract(minPoint).intValue()<0){
+                    couponHistoryDetail.setUnavailableReason("指定商品金额未达到使用门槛（满¥"+minPoint+"）");
+                    disableList.add(couponHistoryDetail);
+                }else{
+                    enableList.add(couponHistoryDetail);
                 }
             }
         }
