@@ -109,6 +109,9 @@ public class PmsProduct implements Serializable {
     @Schema(title = "商品分类名称")
     private String productCategoryName;
 
+    @Schema(title = "创建时间")
+    private Date createTime;
+
     @Schema(title = "商品描述")
     private String description;
 
@@ -426,6 +429,14 @@ public class PmsProduct implements Serializable {
         this.productCategoryName = productCategoryName;
     }
 
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -502,6 +513,7 @@ public class PmsProduct implements Serializable {
         sb.append(", promotionType=").append(promotionType);
         sb.append(", brandName=").append(brandName);
         sb.append(", productCategoryName=").append(productCategoryName);
+        sb.append(", createTime=").append(createTime);
         sb.append(", description=").append(description);
         sb.append(", detailDesc=").append(detailDesc);
         sb.append(", detailHtml=").append(detailHtml);

@@ -71,6 +71,7 @@ public class PmsProductServiceImpl implements PmsProductService {
         //创建商品
         PmsProduct product = productParam;
         product.setId(null);
+        product.setCreateTime(new Date());
         productMapper.insertSelective(product);
         //根据促销类型设置价格：会员价格、阶梯价格、满减价格
         Long productId = product.getId();
@@ -226,6 +227,40 @@ public class PmsProductServiceImpl implements PmsProductService {
         }
         if (productQueryParam.getProductCategoryId() != null) {
             criteria.andProductCategoryIdEqualTo(productQueryParam.getProductCategoryId());
+        }
+        if (productQueryParam.getMinPrice() != null) {
+            criteria.andPriceGreaterThanOrEqualTo(productQueryParam.getMinPrice());
+        }
+        if (productQueryParam.getMaxPrice() != null) {
+            criteria.andPriceLessThanOrEqualTo(productQueryParam.getMaxPrice());
+        }
+        if (productQueryParam.getBeginCreateTime() != null) {
+            criteria.andCreateTimeGreaterThanOrEqualTo(productQueryParam.getBeginCreateTime());
+        }
+        if (productQueryParam.getEndCreateTime() != null) {
+            criteria.andCreateTimeLessThanOrEqualTo(productQueryParam.getEndCreateTime());
+        }
+        //库存状态：0->缺货(stock<=0)；1->有货(stock>0)
+        Integer stockStatus = productQueryParam.getStockStatus();
+        if (stockStatus != null) {
+            if (stockStatus == 0) {
+                criteria.andStockLessThanOrEqualTo(0);
+            } else if (stockStatus == 1) {
+                criteria.andStockGreaterThan(0);
+            }
+        }
+        //排序：1->销量从高到低；2->创建时间从新到旧；3->价格从低到高；4->价格从高到低；不传或其他值保持默认顺序
+        Integer sortBy = productQueryParam.getSortBy();
+        if (sortBy != null) {
+            if (sortBy == 1) {
+                productExample.setOrderByClause("sale desc");
+            } else if (sortBy == 2) {
+                productExample.setOrderByClause("create_time desc");
+            } else if (sortBy == 3) {
+                productExample.setOrderByClause("price asc");
+            } else if (sortBy == 4) {
+                productExample.setOrderByClause("price desc");
+            }
         }
         return productMapper.selectByExample(productExample);
     }
