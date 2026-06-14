@@ -1,5 +1,6 @@
 package com.macro.mall.portal.dao;
 
+import com.macro.mall.model.PmsProduct;
 import com.macro.mall.model.SmsCoupon;
 import com.macro.mall.portal.domain.CartProduct;
 import com.macro.mall.portal.domain.PromotionProduct;
@@ -16,6 +17,11 @@ public interface PortalProductDao {
      * 获取购物车商品信息
      */
     CartProduct getCartProduct(@Param("id") Long id);
+
+    /**
+     * 获取购物车商品的发布状态信息（仅包含上下架/删除状态，用于加购及改数量时校验商品是否可售）
+     */
+    PmsProduct getCartProductInfo(@Param("id") Long id);
 
     /**
      * 获取促销商品信息列表

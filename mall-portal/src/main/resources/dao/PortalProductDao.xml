@@ -42,6 +42,16 @@
             AND pa.type = 0
         ORDER BY pa.sort desc
     </select>
+    <select id="getCartProductInfo" resultType="com.macro.mall.model.PmsProduct">
+        SELECT
+            id,
+            `name` AS name,
+            publish_status AS publishStatus,
+            delete_status AS deleteStatus,
+            stock
+        FROM pms_product
+        WHERE id = #{id}
+    </select>
     <select id="getPromotionProductList" resultMap="promotionProductMap">
         SELECT
             p.id,

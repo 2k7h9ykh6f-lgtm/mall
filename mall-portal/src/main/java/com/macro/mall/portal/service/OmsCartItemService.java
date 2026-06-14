@@ -13,10 +13,11 @@ import java.util.List;
  */
 public interface OmsCartItemService {
     /**
-     * 查询购物车中是否包含该商品，有增加数量，无添加到购物车
+     * 查询购物车中是否包含该商品，有增加数量，无添加到购物车；
+     * 添加前校验商品发布状态与SKU库存，成功时返回带库存提示的购物车行
      */
     @Transactional
-    int add(OmsCartItem cartItem);
+    OmsCartItem add(OmsCartItem cartItem);
 
     /**
      * 根据会员编号获取购物车列表
@@ -29,9 +30,9 @@ public interface OmsCartItemService {
     List<CartPromotionItem> listPromotion(Long memberId, List<Long> cartIds);
 
     /**
-     * 修改某个购物车商品的数量
+     * 修改某个购物车商品的数量；修改前校验商品发布状态与SKU库存，成功时返回带库存提示的购物车行
      */
-    int updateQuantity(Long id, Long memberId, Integer quantity);
+    OmsCartItem updateQuantity(Long id, Long memberId, Integer quantity);
 
     /**
      * 批量删除购物车中的商品
@@ -44,10 +45,10 @@ public interface OmsCartItemService {
     CartProduct getCartProduct(Long productId);
 
     /**
-     * 修改购物车中商品的规格
+     * 修改购物车中商品的规格；修改前校验新规格的发布状态与SKU库存，成功时返回带库存提示的购物车行
      */
     @Transactional
-    int updateAttr(OmsCartItem cartItem);
+    OmsCartItem updateAttr(OmsCartItem cartItem);
 
     /**
      * 清空购物车

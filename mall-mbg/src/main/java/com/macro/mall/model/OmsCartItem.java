@@ -54,6 +54,9 @@ public class OmsCartItem implements Serializable {
     @Schema(title = "商品销售属性:[{'key':'颜色','value':'颜色'},{'key':'容量','value':'4G'}]")
     private String productAttr;
 
+    @Schema(title = "库存提示（非持久化字段，购物车增改时返回当前行的库存状态）")
+    private String stockTip;
+
     private static final long serialVersionUID = 1L;
 
     public Long getId() {
@@ -200,6 +203,14 @@ public class OmsCartItem implements Serializable {
         this.productAttr = productAttr;
     }
 
+    public String getStockTip() {
+        return stockTip;
+    }
+
+    public void setStockTip(String stockTip) {
+        this.stockTip = stockTip;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -224,6 +235,7 @@ public class OmsCartItem implements Serializable {
         sb.append(", productBrand=").append(productBrand);
         sb.append(", productSn=").append(productSn);
         sb.append(", productAttr=").append(productAttr);
+        sb.append(", stockTip=").append(stockTip);
         sb.append(", serialVersionUID=").append(serialVersionUID);
         sb.append("]");
         return sb.toString();

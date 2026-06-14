@@ -31,11 +31,8 @@ public class OmsCartItemController {
     @RequestMapping(value = "/add", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult add(@RequestBody OmsCartItem cartItem) {
-        int count = cartItemService.add(cartItem);
-        if (count > 0) {
-            return CommonResult.success(count);
-        }
-        return CommonResult.failed();
+        OmsCartItem result = cartItemService.add(cartItem);
+        return CommonResult.success(result);
     }
 
     @Operation(summary = "获取当前会员的购物车列表")
@@ -59,11 +56,8 @@ public class OmsCartItemController {
     @ResponseBody
     public CommonResult updateQuantity(@RequestParam Long id,
                                        @RequestParam Integer quantity) {
-        int count = cartItemService.updateQuantity(id, memberService.getCurrentMember().getId(), quantity);
-        if (count > 0) {
-            return CommonResult.success(count);
-        }
-        return CommonResult.failed();
+        OmsCartItem result = cartItemService.updateQuantity(id, memberService.getCurrentMember().getId(), quantity);
+        return CommonResult.success(result);
     }
 
     @Operation(summary = "获取购物车中指定商品的规格,用于重选规格")
@@ -78,11 +72,8 @@ public class OmsCartItemController {
     @RequestMapping(value = "/update/attr", method = RequestMethod.POST)
     @ResponseBody
     public CommonResult updateAttr(@RequestBody OmsCartItem cartItem) {
-        int count = cartItemService.updateAttr(cartItem);
-        if (count > 0) {
-            return CommonResult.success(count);
-        }
-        return CommonResult.failed();
+        OmsCartItem result = cartItemService.updateAttr(cartItem);
+        return CommonResult.success(result);
     }
 
     @Operation(summary = "删除购物车中的指定商品")
