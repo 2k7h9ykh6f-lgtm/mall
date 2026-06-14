@@ -6,7 +6,6 @@ import com.macro.mall.portal.domain.OmsOrderDetail;
 import com.macro.mall.portal.domain.OrderParam;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,9 +14,9 @@ import java.util.Map;
  */
 public interface OmsPortalOrderService {
     /**
-     * 根据用户购物车信息生成确认单信息
+     * 根据用户购物车信息及优惠券/积分选择生成确认单信息
      */
-    ConfirmOrderResult generateConfirmOrder(List<Long> cartIds);
+    ConfirmOrderResult generateConfirmOrder(OrderParam orderParam);
 
     /**
      * 根据提交信息生成订单

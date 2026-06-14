@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,8 +31,8 @@ public class OmsPortalOrderController {
     @Operation(summary = "根据购物车信息生成确认单")
     @RequestMapping(value = "/generateConfirmOrder", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult<ConfirmOrderResult> generateConfirmOrder(@RequestBody List<Long> cartIds) {
-        ConfirmOrderResult confirmOrderResult = portalOrderService.generateConfirmOrder(cartIds);
+    public CommonResult<ConfirmOrderResult> generateConfirmOrder(@RequestBody OrderParam orderParam) {
+        ConfirmOrderResult confirmOrderResult = portalOrderService.generateConfirmOrder(orderParam);
         return CommonResult.success(confirmOrderResult);
     }
 
