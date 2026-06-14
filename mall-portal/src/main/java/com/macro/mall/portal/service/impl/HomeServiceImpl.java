@@ -1,6 +1,7 @@
 package com.macro.mall.portal.service.impl;
 
 import com.github.pagehelper.PageHelper;
+import com.macro.mall.common.exception.Asserts;
 import com.macro.mall.mapper.*;
 import com.macro.mall.model.*;
 import com.macro.mall.portal.dao.HomeDao;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -22,6 +24,13 @@ import java.util.List;
  */
 @Service
 public class HomeServiceImpl implements HomeService {
+    private static final int DEFAULT_PAGE_NUM = 1;
+    private static final int DEFAULT_PAGE_SIZE = 4;
+    /**
+     * 推荐商品单页最大数量，防止超大分页拖垮数据库
+     */
+    static final int MAX_PAGE_SIZE = 100;
+
     @Autowired
     private SmsHomeAdvertiseMapper advertiseMapper;
     @Autowired
@@ -56,14 +65,84 @@ public class HomeServiceImpl implements HomeService {
     }
 
     @Override
-    public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum) {
-        // TODO: 2019/1/29 暂时默认推荐所有商品
-        PageHelper.startPage(pageNum,pageSize);
+    public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum,
+                                                 Long productCategoryId, Long brandId,
+                                                 BigDecimal minPrice, BigDecimal maxPrice,
+                                                 String sortBy) {
+        int resolvedPageNum = pageNum == null ? DEFAULT_PAGE_NUM : pageNum;
+        int resolvedPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+        validateRecommendParams(resolvedPageNum, resolvedPageSize, minPrice, maxPrice);
+        String orderByClause = resolveRecommendOrderBy(sortBy);
+
+        PageHelper.startPage(resolvedPageNum, resolvedPageSize);
         PmsProductExample example = new PmsProductExample();
-        example.createCriteria()
-                .andDeleteStatusEqualTo(0)
-                .andPublishStatusEqualTo(1);
+        PmsProductExample.Criteria criteria = example.createCriteria();
+        criteria.andDeleteStatusEqualTo(0).andPublishStatusEqualTo(1);
+        if (productCategoryId != null) {
+            criteria.andProductCategoryIdEqualTo(productCategoryId);
+        }
+        if (brandId != null) {
+            criteria.andBrandIdEqualTo(brandId);
+        }
+        if (minPrice != null) {
+            criteria.andPriceGreaterThanOrEqualTo(minPrice);
+        }
+        if (maxPrice != null) {
+            criteria.andPriceLessThanOrEqualTo(maxPrice);
+        }
+        if (orderByClause != null) {
+            example.setOrderByClause(orderByClause);
+        }
         return productMapper.selectByExample(example);
+    }
+
+    /**
+     * 校验推荐商品的分页与价格区间参数，非法时抛出{@link com.macro.mall.common.exception.ApiException}。
+     * 包级私有静态方法，便于无需Spring上下文的单元测试。
+     */
+    static void validateRecommendParams(int pageNum, int pageSize, BigDecimal minPrice, BigDecimal maxPrice) {
+        if (pageNum < 1) {
+            Asserts.fail("pageNum不能小于1");
+        }
+        if (pageSize < 1) {
+            Asserts.fail("pageSize不能小于1");
+        }
+        if (pageSize > MAX_PAGE_SIZE) {
+            Asserts.fail("pageSize不能大于" + MAX_PAGE_SIZE);
+        }
+        if (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0) {
+            Asserts.fail("minPrice不能小于0");
+        }
+        if (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0) {
+            Asserts.fail("maxPrice不能小于0");
+        }
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            Asserts.fail("minPrice不能大于maxPrice");
+        }
+    }
+
+    /**
+     * 将排序策略映射为order by子句，仅允许白名单取值（避免SQL注入）。
+     * 为空返回null（不排序，保持原有行为）；未知取值抛出异常。
+     * 包级私有静态方法，便于无需Spring上下文的单元测试。
+     */
+    static String resolveRecommendOrderBy(String sortBy) {
+        if (sortBy == null || sortBy.trim().isEmpty()) {
+            return null;
+        }
+        switch (sortBy.trim()) {
+            case "latest":
+                return "id desc";
+            case "sale":
+                return "sale desc";
+            case "priceAsc":
+                return "price asc";
+            case "priceDesc":
+                return "price desc";
+            default:
+                Asserts.fail("不支持的排序方式: " + sortBy);
+                return null;
+        }
     }
 
     @Override

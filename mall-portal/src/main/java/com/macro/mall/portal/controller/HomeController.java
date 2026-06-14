@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -33,12 +34,17 @@ public class HomeController {
         return CommonResult.success(contentResult);
     }
 
-    @Operation(summary = "分页获取推荐商品")
+    @Operation(summary = "分页获取推荐商品（支持分类/品牌/价格区间筛选及排序）")
     @RequestMapping(value = "/recommendProductList", method = RequestMethod.GET)
     @ResponseBody
     public CommonResult<List<PmsProduct>> recommendProductList(@RequestParam(value = "pageSize", defaultValue = "4") Integer pageSize,
-                                                               @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum) {
-        List<PmsProduct> productList = homeService.recommendProductList(pageSize, pageNum);
+                                                               @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                                               @RequestParam(value = "productCategoryId", required = false) Long productCategoryId,
+                                                               @RequestParam(value = "brandId", required = false) Long brandId,
+                                                               @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+                                                               @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+                                                               @RequestParam(value = "sortBy", required = false) String sortBy) {
+        List<PmsProduct> productList = homeService.recommendProductList(pageSize, pageNum, productCategoryId, brandId, minPrice, maxPrice, sortBy);
         return CommonResult.success(productList);
     }
 

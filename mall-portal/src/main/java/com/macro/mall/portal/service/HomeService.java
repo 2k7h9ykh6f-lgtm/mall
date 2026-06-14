@@ -5,6 +5,7 @@ import com.macro.mall.model.PmsProduct;
 import com.macro.mall.model.PmsProductCategory;
 import com.macro.mall.portal.domain.HomeContentResult;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,8 +21,18 @@ public interface HomeService {
 
     /**
      * 首页商品推荐
+     * @param pageSize          每页数量
+     * @param pageNum           页码
+     * @param productCategoryId 商品分类id（可选）
+     * @param brandId           品牌id（可选）
+     * @param minPrice          最低价格（可选，包含）
+     * @param maxPrice          最高价格（可选，包含）
+     * @param sortBy            排序策略（可选）：latest、sale、priceAsc、priceDesc；为空时不排序
      */
-    List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum);
+    List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum,
+                                          Long productCategoryId, Long brandId,
+                                          BigDecimal minPrice, BigDecimal maxPrice,
+                                          String sortBy);
 
     /**
      * 获取商品分类
