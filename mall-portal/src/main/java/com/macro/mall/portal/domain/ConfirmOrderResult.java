@@ -38,7 +38,36 @@ public class ConfirmOrderResult {
         private BigDecimal freightAmount;
         @Schema(title = "活动优惠")
         private BigDecimal promotionAmount;
+        @Schema(title = "优惠券优惠")
+        private BigDecimal couponAmount;
+        @Schema(title = "积分抵扣")
+        private BigDecimal integrationAmount;
+        @Schema(title = "运费说明")
+        private String freightDescription;
         @Schema(title = "应付金额")
         private BigDecimal payAmount;
+        @Schema(title = "应付金额明细")
+        private PayAmountBreakdown payAmountBreakdown;
+    }
+
+    @Getter
+    @Setter
+    public static class PayAmountBreakdown {
+        @Schema(title = "订单商品总金额")
+        private BigDecimal totalAmount;
+        @Schema(title = "运费")
+        private BigDecimal freightAmount;
+        @Schema(title = "活动优惠")
+        private BigDecimal promotionAmount;
+        @Schema(title = "优惠券优惠")
+        private BigDecimal couponAmount;
+        @Schema(title = "积分抵扣")
+        private BigDecimal integrationAmount;
+        @Schema(title = "应付金额")
+        private BigDecimal payAmount;
+        @Schema(title = "使用的优惠券ID")
+        private Long couponId;
+        @Schema(title = "使用的积分数")
+        private Integer useIntegration;
     }
 }

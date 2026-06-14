@@ -20,6 +20,11 @@ public interface OmsPortalOrderService {
     ConfirmOrderResult generateConfirmOrder(List<Long> cartIds);
 
     /**
+     * 根据购物车商品、优惠券和积分选择，计算确认单金额明细（预览）
+     */
+    ConfirmOrderResult.CalcAmount calcConfirmOrderAmount(List<Long> cartIds, Long couponId, Integer useIntegration);
+
+    /**
      * 根据提交信息生成订单
      */
     @Transactional

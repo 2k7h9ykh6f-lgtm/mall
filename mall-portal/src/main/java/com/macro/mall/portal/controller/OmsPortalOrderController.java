@@ -2,6 +2,7 @@ package com.macro.mall.portal.controller;
 
 import com.macro.mall.common.api.CommonPage;
 import com.macro.mall.common.api.CommonResult;
+import com.macro.mall.portal.domain.CalcConfirmOrderAmountParam;
 import com.macro.mall.portal.domain.ConfirmOrderResult;
 import com.macro.mall.portal.domain.OmsOrderDetail;
 import com.macro.mall.portal.domain.OrderParam;
@@ -35,6 +36,15 @@ public class OmsPortalOrderController {
     public CommonResult<ConfirmOrderResult> generateConfirmOrder(@RequestBody List<Long> cartIds) {
         ConfirmOrderResult confirmOrderResult = portalOrderService.generateConfirmOrder(cartIds);
         return CommonResult.success(confirmOrderResult);
+    }
+
+    @Operation(summary = "计算确认单金额明细（含优惠券/积分预览）")
+    @RequestMapping(value = "/calcConfirmOrderAmount", method = RequestMethod.POST)
+    @ResponseBody
+    public CommonResult<ConfirmOrderResult.CalcAmount> calcConfirmOrderAmount(@RequestBody CalcConfirmOrderAmountParam param) {
+        ConfirmOrderResult.CalcAmount calcAmount = portalOrderService.calcConfirmOrderAmount(
+                param.getCartIds(), param.getCouponId(), param.getUseIntegration());
+        return CommonResult.success(calcAmount);
     }
 
     @Operation(summary = "根据购物车信息生成订单")
