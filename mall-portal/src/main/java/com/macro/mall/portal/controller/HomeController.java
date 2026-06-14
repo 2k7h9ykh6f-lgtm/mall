@@ -7,11 +7,13 @@ import com.macro.mall.model.PmsProductCategory;
 import com.macro.mall.portal.domain.HomeContentResult;
 import com.macro.mall.portal.service.HomeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -36,9 +38,16 @@ public class HomeController {
     @Operation(summary = "分页获取推荐商品")
     @RequestMapping(value = "/recommendProductList", method = RequestMethod.GET)
     @ResponseBody
-    public CommonResult<List<PmsProduct>> recommendProductList(@RequestParam(value = "pageSize", defaultValue = "4") Integer pageSize,
-                                                               @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum) {
-        List<PmsProduct> productList = homeService.recommendProductList(pageSize, pageNum);
+    public CommonResult<List<PmsProduct>> recommendProductList(
+            @RequestParam(value = "pageSize", defaultValue = "4") Integer pageSize,
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @Parameter(description = "商品分类id") @RequestParam(required = false) Long productCategoryId,
+            @Parameter(description = "品牌id") @RequestParam(required = false) Long brandId,
+            @Parameter(description = "最低价格") @RequestParam(required = false) BigDecimal minPrice,
+            @Parameter(description = "最高价格") @RequestParam(required = false) BigDecimal maxPrice,
+            @Parameter(description = "排序策略：latest-最新、sale-销量、priceAsc-价格升序、priceDesc-价格降序") @RequestParam(required = false) String sortBy) {
+        List<PmsProduct> productList = homeService.recommendProductList(pageSize, pageNum,
+                productCategoryId, brandId, minPrice, maxPrice, sortBy);
         return CommonResult.success(productList);
     }
 

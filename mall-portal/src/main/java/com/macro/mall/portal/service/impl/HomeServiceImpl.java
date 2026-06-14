@@ -1,6 +1,7 @@
 package com.macro.mall.portal.service.impl;
 
 import com.github.pagehelper.PageHelper;
+import com.macro.mall.common.exception.ApiException;
 import com.macro.mall.mapper.*;
 import com.macro.mall.model.*;
 import com.macro.mall.portal.dao.HomeDao;
@@ -13,8 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 首页内容管理Service实现类
@@ -55,14 +60,80 @@ public class HomeServiceImpl implements HomeService {
         return result;
     }
 
+    /** 允许的排序策略 */
+    private static final Set<String> ALLOWED_SORT_BY = new HashSet<>(Arrays.asList(
+            "latest", "sale", "priceAsc", "priceDesc"
+    ));
+
+    /** 每页最大条数 */
+    private static final int MAX_PAGE_SIZE = 100;
+
     @Override
-    public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum) {
-        // TODO: 2019/1/29 暂时默认推荐所有商品
-        PageHelper.startPage(pageNum,pageSize);
+    public List<PmsProduct> recommendProductList(Integer pageSize, Integer pageNum,
+                                                  Long productCategoryId, Long brandId,
+                                                  BigDecimal minPrice, BigDecimal maxPrice,
+                                                  String sortBy) {
+        // 参数校验
+        if (pageSize == null || pageSize < 1) {
+            throw new ApiException("pageSize must be >= 1");
+        }
+        if (pageNum == null || pageNum < 1) {
+            throw new ApiException("pageNum must be >= 1");
+        }
+        if (pageSize > MAX_PAGE_SIZE) {
+            throw new ApiException("pageSize must be <= " + MAX_PAGE_SIZE);
+        }
+        // 价格区间校验：minPrice <= maxPrice
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new ApiException("minPrice must be <= maxPrice");
+        }
+        // 排序策略校验
+        if (sortBy != null && !sortBy.isEmpty() && !ALLOWED_SORT_BY.contains(sortBy)) {
+            throw new ApiException("Invalid sortBy value: " + sortBy
+                    + ". Allowed values: " + ALLOWED_SORT_BY);
+        }
+
+        PageHelper.startPage(pageNum, pageSize);
         PmsProductExample example = new PmsProductExample();
-        example.createCriteria()
-                .andDeleteStatusEqualTo(0)
+        PmsProductExample.Criteria criteria = example.createCriteria();
+        // 基础条件：未删除 + 已发布
+        criteria.andDeleteStatusEqualTo(0)
                 .andPublishStatusEqualTo(1);
+
+        // 可选过滤条件
+        if (productCategoryId != null) {
+            criteria.andProductCategoryIdEqualTo(productCategoryId);
+        }
+        if (brandId != null) {
+            criteria.andBrandIdEqualTo(brandId);
+        }
+        if (minPrice != null) {
+            criteria.andPriceGreaterThanOrEqualTo(minPrice);
+        }
+        if (maxPrice != null) {
+            criteria.andPriceLessThanOrEqualTo(maxPrice);
+        }
+
+        // 排序策略
+        if (sortBy != null) {
+            switch (sortBy) {
+                case "latest":
+                    example.setOrderByClause("id desc");
+                    break;
+                case "sale":
+                    example.setOrderByClause("sale desc");
+                    break;
+                case "priceAsc":
+                    example.setOrderByClause("price asc");
+                    break;
+                case "priceDesc":
+                    example.setOrderByClause("price desc");
+                    break;
+                default:
+                    break;
+            }
+        }
+
         return productMapper.selectByExample(example);
     }
 
