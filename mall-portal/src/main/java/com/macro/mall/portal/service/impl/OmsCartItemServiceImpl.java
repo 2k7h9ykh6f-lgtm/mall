@@ -4,10 +4,13 @@ import cn.hutool.core.collection.CollUtil;
 import com.macro.mall.mapper.OmsCartItemMapper;
 import com.macro.mall.model.OmsCartItem;
 import com.macro.mall.model.OmsCartItemExample;
+import com.macro.mall.model.PmsSkuStock;
 import com.macro.mall.model.UmsMember;
 import com.macro.mall.portal.dao.PortalProductDao;
 import com.macro.mall.portal.domain.CartProduct;
 import com.macro.mall.portal.domain.CartPromotionItem;
+import com.macro.mall.portal.dto.CartItemResult;
+import com.macro.mall.portal.exception.CartValidationException;
 import com.macro.mall.portal.service.OmsCartItemService;
 import com.macro.mall.portal.service.OmsPromotionService;
 import com.macro.mall.portal.service.UmsMemberService;
@@ -35,23 +38,78 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
     @Autowired
     private UmsMemberService memberService;
 
+    /**
+     * 校验商品发布状态和SKU库存
+     *
+     * @param productId     商品ID
+     * @param productSkuId  SKU ID
+     * @param requestedQty  请求的总数量
+     * @return 匹配的SKU库存记录（用于生成库存提示）
+     * @throws CartValidationException 校验失败时抛出
+     */
+    private PmsSkuStock validateCartItem(Long productId, Long productSkuId, int requestedQty) {
+        CartProduct cartProduct = productDao.getCartProduct(productId);
+        if (cartProduct == null) {
+            throw new CartValidationException("商品不存在");
+        }
+        if (cartProduct.getPublishStatus() == null || cartProduct.getPublishStatus() != 1) {
+            throw new CartValidationException("商品已下架");
+        }
+        PmsSkuStock targetSku = null;
+        if (cartProduct.getSkuStockList() != null) {
+            for (PmsSkuStock sku : cartProduct.getSkuStockList()) {
+                if (sku.getId().equals(productSkuId)) {
+                    targetSku = sku;
+                    break;
+                }
+            }
+        }
+        if (targetSku == null) {
+            throw new CartValidationException("商品SKU不存在");
+        }
+        int availableStock = targetSku.getStock() == null ? 0 : targetSku.getStock();
+        if (availableStock < requestedQty) {
+            throw new CartValidationException("库存不足，当前库存：" + availableStock + "件");
+        }
+        return targetSku;
+    }
+
     @Override
-    public int add(OmsCartItem cartItem) {
-        int count;
-        UmsMember currentMember =memberService.getCurrentMember();
+    public CartItemResult add(OmsCartItem cartItem) {
+        UmsMember currentMember = memberService.getCurrentMember();
         cartItem.setMemberId(currentMember.getId());
         cartItem.setMemberNickname(currentMember.getNickname());
         cartItem.setDeleteStatus(0);
+
+        // 检查购物车中是否已存在该商品
         OmsCartItem existCartItem = getCartItem(cartItem);
+
+        // 计算总数量（已有商品则累加）
+        int totalQuantity = cartItem.getQuantity();
+        if (existCartItem != null) {
+            totalQuantity += existCartItem.getQuantity();
+        }
+
+        // 校验商品发布状态和SKU库存
+        PmsSkuStock sku = validateCartItem(cartItem.getProductId(), cartItem.getProductSkuId(), totalQuantity);
+
+        int count;
+        OmsCartItem resultItem;
         if (existCartItem == null) {
             cartItem.setCreateDate(new Date());
             count = cartItemMapper.insert(cartItem);
+            resultItem = cartItem;
         } else {
-            cartItem.setModifyDate(new Date());
-            existCartItem.setQuantity(existCartItem.getQuantity() + cartItem.getQuantity());
+            existCartItem.setQuantity(totalQuantity);
+            existCartItem.setModifyDate(new Date());
             count = cartItemMapper.updateByPrimaryKey(existCartItem);
+            resultItem = existCartItem;
         }
-        return count;
+
+        if (count > 0) {
+            return new CartItemResult(resultItem, sku.getStock());
+        }
+        throw new CartValidationException("添加购物车失败");
     }
 
     /**
@@ -92,13 +150,34 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
     }
 
     @Override
-    public int updateQuantity(Long id, Long memberId, Integer quantity) {
-        OmsCartItem cartItem = new OmsCartItem();
-        cartItem.setQuantity(quantity);
+    public CartItemResult updateQuantity(Long id, Long memberId, Integer quantity) {
+        // 先查询购物车商品以获取productId和productSkuId
+        OmsCartItemExample queryExample = new OmsCartItemExample();
+        queryExample.createCriteria().andDeleteStatusEqualTo(0)
+                .andIdEqualTo(id).andMemberIdEqualTo(memberId);
+        List<OmsCartItem> cartItems = cartItemMapper.selectByExample(queryExample);
+        if (CollectionUtils.isEmpty(cartItems)) {
+            throw new CartValidationException("购物车商品不存在");
+        }
+        OmsCartItem existingItem = cartItems.get(0);
+
+        // 校验商品发布状态和SKU库存（quantity为目标总量，非增量）
+        PmsSkuStock sku = validateCartItem(existingItem.getProductId(), existingItem.getProductSkuId(), quantity);
+
+        // 执行数量更新
+        OmsCartItem updateRecord = new OmsCartItem();
+        updateRecord.setQuantity(quantity);
+        updateRecord.setModifyDate(new Date());
         OmsCartItemExample example = new OmsCartItemExample();
         example.createCriteria().andDeleteStatusEqualTo(0)
                 .andIdEqualTo(id).andMemberIdEqualTo(memberId);
-        return cartItemMapper.updateByExampleSelective(cartItem, example);
+        int count = cartItemMapper.updateByExampleSelective(updateRecord, example);
+
+        if (count > 0) {
+            existingItem.setQuantity(quantity);
+            return new CartItemResult(existingItem, sku.getStock());
+        }
+        throw new CartValidationException("更新购物车数量失败");
     }
 
     @Override
@@ -116,7 +195,7 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
     }
 
     @Override
-    public int updateAttr(OmsCartItem cartItem) {
+    public CartItemResult updateAttr(OmsCartItem cartItem) {
         //删除原购物车信息
         OmsCartItem updateCart = new OmsCartItem();
         updateCart.setId(cartItem.getId());
@@ -124,8 +203,8 @@ public class OmsCartItemServiceImpl implements OmsCartItemService {
         updateCart.setDeleteStatus(1);
         cartItemMapper.updateByPrimaryKeySelective(updateCart);
         cartItem.setId(null);
-        add(cartItem);
-        return 1;
+        // 重新添加时继承add()的校验逻辑
+        return add(cartItem);
     }
 
     @Override

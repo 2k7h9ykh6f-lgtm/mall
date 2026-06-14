@@ -4,6 +4,8 @@ import com.macro.mall.common.api.CommonResult;
 import com.macro.mall.model.OmsCartItem;
 import com.macro.mall.portal.domain.CartProduct;
 import com.macro.mall.portal.domain.CartPromotionItem;
+import com.macro.mall.portal.dto.CartItemResult;
+import com.macro.mall.portal.exception.CartValidationException;
 import com.macro.mall.portal.service.OmsCartItemService;
 import com.macro.mall.portal.service.UmsMemberService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,12 +32,13 @@ public class OmsCartItemController {
     @Operation(summary = "添加商品到购物车")
     @RequestMapping(value = "/add", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult add(@RequestBody OmsCartItem cartItem) {
-        int count = cartItemService.add(cartItem);
-        if (count > 0) {
-            return CommonResult.success(count);
+    public CommonResult<CartItemResult> add(@RequestBody OmsCartItem cartItem) {
+        try {
+            CartItemResult result = cartItemService.add(cartItem);
+            return CommonResult.success(result);
+        } catch (CartValidationException e) {
+            return CommonResult.failed(e.getMessage());
         }
-        return CommonResult.failed();
     }
 
     @Operation(summary = "获取当前会员的购物车列表")
@@ -57,13 +60,14 @@ public class OmsCartItemController {
     @Operation(summary = "修改购物车中指定商品的数量")
     @RequestMapping(value = "/update/quantity", method = RequestMethod.GET)
     @ResponseBody
-    public CommonResult updateQuantity(@RequestParam Long id,
-                                       @RequestParam Integer quantity) {
-        int count = cartItemService.updateQuantity(id, memberService.getCurrentMember().getId(), quantity);
-        if (count > 0) {
-            return CommonResult.success(count);
+    public CommonResult<CartItemResult> updateQuantity(@RequestParam Long id,
+                                                       @RequestParam Integer quantity) {
+        try {
+            CartItemResult result = cartItemService.updateQuantity(id, memberService.getCurrentMember().getId(), quantity);
+            return CommonResult.success(result);
+        } catch (CartValidationException e) {
+            return CommonResult.failed(e.getMessage());
         }
-        return CommonResult.failed();
     }
 
     @Operation(summary = "获取购物车中指定商品的规格,用于重选规格")
@@ -77,12 +81,13 @@ public class OmsCartItemController {
     @Operation(summary = "修改购物车中商品的规格")
     @RequestMapping(value = "/update/attr", method = RequestMethod.POST)
     @ResponseBody
-    public CommonResult updateAttr(@RequestBody OmsCartItem cartItem) {
-        int count = cartItemService.updateAttr(cartItem);
-        if (count > 0) {
-            return CommonResult.success(count);
+    public CommonResult<CartItemResult> updateAttr(@RequestBody OmsCartItem cartItem) {
+        try {
+            CartItemResult result = cartItemService.updateAttr(cartItem);
+            return CommonResult.success(result);
+        } catch (CartValidationException e) {
+            return CommonResult.failed(e.getMessage());
         }
-        return CommonResult.failed();
     }
 
     @Operation(summary = "删除购物车中的指定商品")

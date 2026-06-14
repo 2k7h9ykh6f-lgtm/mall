@@ -3,6 +3,7 @@ package com.macro.mall.portal.service;
 import com.macro.mall.model.OmsCartItem;
 import com.macro.mall.portal.domain.CartProduct;
 import com.macro.mall.portal.domain.CartPromotionItem;
+import com.macro.mall.portal.dto.CartItemResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -14,9 +15,10 @@ import java.util.List;
 public interface OmsCartItemService {
     /**
      * 查询购物车中是否包含该商品，有增加数量，无添加到购物车
+     * 校验商品发布状态和SKU库存，校验通过返回带库存提示的结果
      */
     @Transactional
-    int add(OmsCartItem cartItem);
+    CartItemResult add(OmsCartItem cartItem);
 
     /**
      * 根据会员编号获取购物车列表
@@ -29,9 +31,9 @@ public interface OmsCartItemService {
     List<CartPromotionItem> listPromotion(Long memberId, List<Long> cartIds);
 
     /**
-     * 修改某个购物车商品的数量
+     * 修改某个购物车商品的数量，校验商品发布状态和SKU库存
      */
-    int updateQuantity(Long id, Long memberId, Integer quantity);
+    CartItemResult updateQuantity(Long id, Long memberId, Integer quantity);
 
     /**
      * 批量删除购物车中的商品
@@ -44,10 +46,10 @@ public interface OmsCartItemService {
     CartProduct getCartProduct(Long productId);
 
     /**
-     * 修改购物车中商品的规格
+     * 修改购物车中商品的规格，校验商品发布状态和SKU库存
      */
     @Transactional
-    int updateAttr(OmsCartItem cartItem);
+    CartItemResult updateAttr(OmsCartItem cartItem);
 
     /**
      * 清空购物车
