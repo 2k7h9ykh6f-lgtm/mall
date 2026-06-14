@@ -227,6 +227,58 @@ public class PmsProductServiceImpl implements PmsProductService {
         if (productQueryParam.getProductCategoryId() != null) {
             criteria.andProductCategoryIdEqualTo(productQueryParam.getProductCategoryId());
         }
+        // 价格区间筛选
+        if (productQueryParam.getMinPrice() != null) {
+            criteria.andPriceGreaterThanOrEqualTo(productQueryParam.getMinPrice());
+        }
+        if (productQueryParam.getMaxPrice() != null) {
+            criteria.andPriceLessThanOrEqualTo(productQueryParam.getMaxPrice());
+        }
+        // 创建时间范围筛选
+        if (productQueryParam.getBeginCreateTime() != null) {
+            criteria.andCreateTimeGreaterThanOrEqualTo(productQueryParam.getBeginCreateTime());
+        }
+        if (productQueryParam.getEndCreateTime() != null) {
+            criteria.andCreateTimeLessThanOrEqualTo(productQueryParam.getEndCreateTime());
+        }
+        // 库存状态筛选：0->充足；1->低库存；2->无库存
+        if (productQueryParam.getStockStatus() != null) {
+            switch (productQueryParam.getStockStatus()) {
+                case 0:
+                    // 库存充足：有库存且未触发预警
+                    criteria.addRawCriterion("(stock > 0 AND (low_stock IS NULL OR stock > low_stock))");
+                    break;
+                case 1:
+                    // 低库存：有库存但已触发预警
+                    criteria.addRawCriterion("(stock > 0 AND low_stock IS NOT NULL AND stock <= low_stock)");
+                    break;
+                case 2:
+                    // 无库存
+                    criteria.addRawCriterion("(stock = 0 OR stock IS NULL)");
+                    break;
+                default:
+                    break;
+            }
+        }
+        // 排序：支持按价格、创建时间、销量排序，默认按id降序
+        if (!StrUtil.isEmpty(productQueryParam.getSortBy())) {
+            switch (productQueryParam.getSortBy()) {
+                case "price":
+                    productExample.setOrderByClause("price desc, id desc");
+                    break;
+                case "createTime":
+                    productExample.setOrderByClause("create_time desc, id desc");
+                    break;
+                case "sale":
+                    productExample.setOrderByClause("sale desc, id desc");
+                    break;
+                default:
+                    productExample.setOrderByClause("id desc");
+                    break;
+            }
+        } else {
+            productExample.setOrderByClause("id desc");
+        }
         return productMapper.selectByExample(productExample);
     }
 
