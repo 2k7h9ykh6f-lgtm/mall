@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -23,4 +24,8 @@ public class SmsCouponHistoryDetail extends SmsCouponHistory {
     private List<SmsCouponProductRelation> productRelationList;
     @Schema(title = "优惠券关联商品分类")
     private List<SmsCouponProductCategoryRelation> categoryRelationList;
+    @Schema(title = "优惠券不可用原因：1->已过期；2->未达到使用门槛；3->无符合的指定分类商品；4->无符合的指定商品；为空表示当前可用")
+    private Integer unavailableReason;
+    @Schema(title = "购物车中可参与该优惠券计算的商品金额（全场通用为购物车总额，指定分类/商品为对应匹配商品金额）")
+    private BigDecimal matchedAmount;
 }

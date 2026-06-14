@@ -25,6 +25,22 @@ import java.util.stream.Collectors;
  */
 @Service
 public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
+    /**
+     * 优惠券不可用原因：已过期
+     */
+    public static final int UNAVAILABLE_REASON_EXPIRED = 1;
+    /**
+     * 优惠券不可用原因：未达到使用门槛
+     */
+    public static final int UNAVAILABLE_REASON_MIN_POINT = 2;
+    /**
+     * 优惠券不可用原因：无符合的指定分类商品
+     */
+    public static final int UNAVAILABLE_REASON_CATEGORY_MISMATCH = 3;
+    /**
+     * 优惠券不可用原因：无符合的指定商品
+     */
+    public static final int UNAVAILABLE_REASON_PRODUCT_MISMATCH = 4;
     @Autowired
     private UmsMemberService memberService;
     @Autowired
@@ -117,56 +133,78 @@ public class UmsMemberCouponServiceImpl implements UmsMemberCouponService {
         Date now = new Date();
         //获取该用户所有优惠券
         List<SmsCouponHistoryDetail> allList = couponHistoryDao.getDetailList(currentMember.getId());
-        //根据优惠券使用类型来判断优惠券是否可用
+        //根据优惠券使用类型来判断优惠券是否可用，并对不可用的优惠券记录原因
         List<SmsCouponHistoryDetail> enableList = new ArrayList<>();
         List<SmsCouponHistoryDetail> disableList = new ArrayList<>();
         for (SmsCouponHistoryDetail couponHistoryDetail : allList) {
             Integer useType = couponHistoryDetail.getCoupon().getUseType();
             BigDecimal minPoint = couponHistoryDetail.getCoupon().getMinPoint();
             Date endTime = couponHistoryDetail.getCoupon().getEndTime();
-            if(useType.equals(0)){
-                //0->全场通用
-                //判断是否满足优惠起点
-                //计算购物车商品的总价
-                BigDecimal totalAmount = calcTotalAmount(cartItemList);
-                if(now.before(endTime)&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
-                    disableList.add(couponHistoryDetail);
-                }
-            }else if(useType.equals(1)){
-                //1->指定分类
-                //计算指定分类商品的总价
+            //计算购物车中可参与该优惠券计算的商品金额，并确定指定分类/商品不匹配时对应的原因
+            BigDecimal matchedAmount;
+            Integer mismatchReason;
+            if (useType.equals(0)) {
+                //0->全场通用：购物车所有商品都可参与计算，不存在商品不匹配的情况
+                matchedAmount = calcTotalAmount(cartItemList);
+                mismatchReason = null;
+            } else if (useType.equals(1)) {
+                //1->指定分类：仅指定分类的商品可参与计算
                 List<Long> productCategoryIds = new ArrayList<>();
                 for (SmsCouponProductCategoryRelation categoryRelation : couponHistoryDetail.getCategoryRelationList()) {
                     productCategoryIds.add(categoryRelation.getProductCategoryId());
                 }
-                BigDecimal totalAmount = calcTotalAmountByproductCategoryId(cartItemList,productCategoryIds);
-                if(now.before(endTime)&&totalAmount.intValue()>0&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
-                    disableList.add(couponHistoryDetail);
-                }
-            }else if(useType.equals(2)){
-                //2->指定商品
-                //计算指定商品的总价
+                matchedAmount = calcTotalAmountByproductCategoryId(cartItemList, productCategoryIds);
+                mismatchReason = UNAVAILABLE_REASON_CATEGORY_MISMATCH;
+            } else if (useType.equals(2)) {
+                //2->指定商品：仅指定商品可参与计算
                 List<Long> productIds = new ArrayList<>();
                 for (SmsCouponProductRelation productRelation : couponHistoryDetail.getProductRelationList()) {
                     productIds.add(productRelation.getProductId());
                 }
-                BigDecimal totalAmount = calcTotalAmountByProductId(cartItemList,productIds);
-                if(now.before(endTime)&&totalAmount.intValue()>0&&totalAmount.subtract(minPoint).intValue()>=0){
-                    enableList.add(couponHistoryDetail);
-                }else{
-                    disableList.add(couponHistoryDetail);
-                }
+                matchedAmount = calcTotalAmountByProductId(cartItemList, productIds);
+                mismatchReason = UNAVAILABLE_REASON_PRODUCT_MISMATCH;
+            } else {
+                //其它未知使用类型，保持原有行为：既不计入可用也不计入不可用
+                continue;
+            }
+            couponHistoryDetail.setMatchedAmount(matchedAmount);
+            Integer unavailableReason = determineUnavailableReason(now, endTime, matchedAmount, minPoint, mismatchReason);
+            if (unavailableReason == null) {
+                enableList.add(couponHistoryDetail);
+            } else {
+                couponHistoryDetail.setUnavailableReason(unavailableReason);
+                disableList.add(couponHistoryDetail);
             }
         }
-        if(type.equals(1)){
+        if (type.equals(1)) {
             return enableList;
-        }else{
+        } else {
             return disableList;
         }
+    }
+
+    /**
+     * 判断优惠券不可用的原因，返回{@code null}表示该优惠券当前可用。
+     * 判断优先级：已过期 &gt; 指定分类/商品不匹配 &gt; 未达到使用门槛，
+     * 与原有可用性判断逻辑保持一致。
+     *
+     * @param now            当前时间
+     * @param endTime        优惠券结束时间
+     * @param matchedAmount  购物车中可参与该优惠券计算的商品金额
+     * @param minPoint       优惠券使用门槛
+     * @param mismatchReason 当匹配金额为0时对应的不匹配原因；全场通用为{@code null}，不会出现不匹配
+     */
+    private Integer determineUnavailableReason(Date now, Date endTime, BigDecimal matchedAmount, BigDecimal minPoint, Integer mismatchReason) {
+        if (!now.before(endTime)) {
+            return UNAVAILABLE_REASON_EXPIRED;
+        }
+        if (mismatchReason != null && matchedAmount.intValue() <= 0) {
+            return mismatchReason;
+        }
+        if (matchedAmount.subtract(minPoint).intValue() < 0) {
+            return UNAVAILABLE_REASON_MIN_POINT;
+        }
+        return null;
     }
 
     @Override
